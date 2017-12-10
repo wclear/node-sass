@@ -340,6 +340,43 @@ describe('cli', function() {
   });
 
   describe('node-sass --output directory', function() {
+    it('should not throw an error when a watched file is deleted', function(done) {
+      var srcDir = fixture('watching/deletion-src/');
+      var destDir = fixture('watching/deletion-out/');
+      var exited = false;
+
+      if (!fs.existsSync(srcDir)){
+        fs.mkdirSync(srcDir);
+      }
+
+      if (!fs.existsSync(destDir)) {
+        fs.mkdirSync(destDir);
+      }
+
+      var srcFile = path.join(srcDir, 'to-be-deleted.css');
+      fs.writeFileSync(srcFile, 'a{top:0}');
+
+      var bin = spawn(cli, [
+        '--output', destDir,
+        '--watch', srcDir
+      ]);
+
+      bin.stderr.setEncoding('utf8');
+      bin.stderr.once('data', function(data) {
+        assert.fail("Error thrown on file deletion.", "No error on file deletion.", "File deletion causes error: " + data);
+      });
+
+      setTimeout(function() {
+        fs.unlinkSync(srcFile);
+        setTimeout(function() {
+          bin.kill();
+          rimraf(srcFile, function() {
+            rimraf(destDir, done);
+          });
+        }, 800);
+      }, 800);
+    });
+
     it.skip('should watch whole directory', function(done) {
       var destDir = fixture('watching-css-out-01/');
       var srcDir = fixture('watching-dir-01/');
